@@ -13,7 +13,7 @@ const EraserIcon = () => (
   </svg>
 );
 
-export default function Whiteboard({ sessionId, socket, user }) {
+export default function Whiteboard({ classroomId, socket, user }) {
   const canvasRef = useRef(null);
   const [drawing, setDrawing] = useState(false);
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
@@ -89,7 +89,7 @@ export default function Whiteboard({ sessionId, socket, user }) {
     drawLine(ctx, lastPos.x, lastPos.y, currentPos.x, currentPos.y, strokeColor, size, compositeOperation);
     
     const drawData = {
-      sessionId,
+      classroomId,
       prevX: lastPos.x,
       prevY: lastPos.y,
       x: currentPos.x,
@@ -112,7 +112,7 @@ export default function Whiteboard({ sessionId, socket, user }) {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    socket.emit("clear", { sessionId });
+    socket.emit("clear", { classroomId });
   };
 
   // Common class for toolbar buttons

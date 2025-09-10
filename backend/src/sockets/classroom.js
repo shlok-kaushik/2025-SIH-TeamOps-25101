@@ -1,32 +1,67 @@
 export default function classroomSocket(io, socket) {
-  // Join a session
-  socket.on("join", ({ sessionId, user }) => {
-    socket.join(sessionId);       // join room
-    socket.data.user = user;      // store user info for role checks
-    console.log(`${user.email} joined session ${sessionId}`);
+  // Join a classroom
+  socket.on("join-classroom", ({ classroomId, user }) => {
+    socket.join(`classroom-${classroomId}`);
+    socket.data.user = user;
+    socket.data.classroomId = classroomId;
+
+    console.log(`${user.email} joined classroom ${classroomId}`);
+
+    io.to(`classroom-${classroomId}`).emit("user-joined", {
+      user,
+      classroomId,
+    });
   });
 
   // Whiteboard drawing (teacher only)
   socket.on("draw", (data) => {
     const user = socket.data.user;
-    if (!user || user.role.toLowerCase() !== "teacher") return; // only teacher
-    io.to(data.sessionId).emit("draw", data); // send to everyone in session
+    const classroomId = socket.data.classroomId;
+    if (!user || user.role.toLowerCase() !== "teacher") return;
+
+    io.to(`classroom-${classroomId}`).emit("draw", data);
   });
 
-  // Chat message (everyone)
-  socket.on("chat", (msg) => {
-    io.to(msg.sessionId).emit("chat", msg); // broadcast within session
-  });
+  // Chat messages (everyone can chat)
+  // Chat messages (everyone can chat)
+socket.on("chat", (msg) => {
+  const classroomId = socket.data.classroomId;
+  if (!classroomId) return;
+
+  const message = {
+    user: socket.data.user,
+    text: msg.text,            // ✅ extract text properly
+    timestamp: msg.timestamp,  // ✅ forward timestamp
+  };
+
+  io.to(`classroom-${classroomId}`).emit("chat", message);
+});
+
 
   // Clear canvas (teacher only)
-  socket.on("clear", ({ sessionId }) => {
+  socket.on("clear", () => {
     const user = socket.data.user;
-    if (!user || user.role.toLowerCase() !== "teacher") return; // only teacher
-    io.to(sessionId).emit("clear");
+    const classroomId = socket.data.classroomId;
+    if (!user || user.role.toLowerCase() !== "teacher") return;
+
+    io.to(`classroom-${classroomId}`).emit("clear");
+  });
+
+  // Leave classroom
+  socket.on("leave-classroom", () => {
+    const classroomId = socket.data.classroomId;
+    if (classroomId) {
+      socket.leave(`classroom-${classroomId}`);
+      io.to(`classroom-${classroomId}`).emit("user-left", socket.data.user);
+    }
   });
 
   // Disconnect
   socket.on("disconnect", () => {
+    const classroomId = socket.data.classroomId;
+    if (classroomId) {
+      io.to(`classroom-${classroomId}`).emit("user-left", socket.data.user);
+    }
     console.log("Client disconnected:", socket.id);
   });
 }

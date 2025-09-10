@@ -1,19 +1,19 @@
 import React, { useEffect, useState, useRef } from "react";
 
-export default function ChatBox({ sessionId, socket, user }) {
+export default function ChatBox({ classroomId, socket, user }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
 
   // Scroll to bottom when new message arrives
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(scrollToBottom, [messages]);
-
   useEffect(() => {
-    // Listen for chat messages from server
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Listen for incoming messages
+  useEffect(() => {
+    if (!socket) return;
+
     socket.on("chat", (msg) => {
       setMessages((prev) => [...prev, msg]);
     });
@@ -24,36 +24,44 @@ export default function ChatBox({ sessionId, socket, user }) {
   }, [socket]);
 
   const sendMessage = () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !user) return;
 
     const msg = {
-      sessionId,
-      user: { email: user.email, role: user.role },
+      classroomId, // ✅ fixed: matches Classroom.jsx
+      user: { email: user.email || "anonymous", role: user.role || "student" },
       text: input,
       timestamp: new Date().toISOString(),
     };
 
-    socket.emit("chat", msg);
-    setMessages((prev) => [...prev, msg]);
-    setInput("");
+    try {
+      socket.emit("chat", msg);
+      setMessages((prev) => [...prev, msg]); // optimistic render
+      setInput("");
+    } catch (err) {
+      console.error("Chat send error:", err);
+    }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") sendMessage();
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault(); // stop accidental reload
+      sendMessage();
+    }
   };
 
   return (
     <div
       style={{
-        width: "300px",
+        width: "100%",
         border: "1px solid #ccc",
         borderRadius: "5px",
         padding: "10px",
         display: "flex",
         flexDirection: "column",
-        height: "600px",
+        height: "100%",
       }}
     >
+      {/* Messages */}
       <div
         style={{
           flex: 1,
@@ -63,7 +71,7 @@ export default function ChatBox({ sessionId, socket, user }) {
       >
         {messages.map((m, idx) => (
           <div key={idx} style={{ marginBottom: "5px" }}>
-            <strong>{m.user.email}</strong>{" "}
+            <strong>{m.user?.email ?? "unknown"}</strong>{" "}
             <span style={{ fontSize: "0.8em", color: "#555" }}>
               [{new Date(m.timestamp).toLocaleTimeString()}]
             </span>
@@ -73,16 +81,21 @@ export default function ChatBox({ sessionId, socket, user }) {
         <div ref={messagesEndRef} />
       </div>
 
-      <div style={{ display: "flex" }}>
+      {/* Input */}
+      <div style={{ display: "flex", alignItems: "center" }}>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyDown}
           placeholder="Type a message..."
           style={{ flex: 1, padding: "5px" }}
         />
-        <button onClick={sendMessage} style={{ marginLeft: "5px" }}>
+        <button
+          type="button"
+          onClick={sendMessage}
+          style={{ marginLeft: "5px" }}
+        >
           Send
         </button>
       </div>
