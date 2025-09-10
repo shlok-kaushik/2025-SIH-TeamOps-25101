@@ -1,33 +1,61 @@
-import { Stage, Layer, Line } from "react-konva";
-import { useState, useRef } from "react";
+import React, { useRef, useState } from "react";
+import { useSocket } from "../hooks/useSocket";
 
-export default function Whiteboard({ socket }) {
-  const [lines, setLines] = useState([]);
-  const isDrawing = useRef(false);
+export default function Whiteboard({ sessionId }) {
+  const canvasRef = useRef(null);
+  const [ctx, setCtx] = useState(null);
 
-  const handleMouseDown = (e) => { isDrawing.current = true; setLines([...lines, []]); };
-  const handleMouseUp = () => { isDrawing.current = false; };
-  const handleMouseMove = (e) => {
-    if (!isDrawing.current) return;
-    const stage = e.target.getStage();
-    const point = stage.getPointerPosition();
-    let newLines = lines.slice();
-    newLines[newLines.length - 1] = newLines[newLines.length - 1].concat([point.x, point.y]);
-    setLines(newLines);
-    socket.current.emit("annotation:event", { sessionId: "demo", points: newLines[newLines.length - 1] });
+  const { sendDraw } = useSocket(
+    sessionId,
+    (data) => {
+      // render incoming strokes
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const context = canvas.getContext("2d");
+      context.beginPath();
+      context.moveTo(data.prevX, data.prevY);
+      context.lineTo(data.x, data.y);
+      context.strokeStyle = "black";
+      context.lineWidth = 2;
+      context.stroke();
+    },
+    null
+  );
+
+  const startDrawing = (e) => {
+    const canvas = canvasRef.current;
+    const context = canvas.getContext("2d");
+    setCtx(context);
+    context.beginPath();
+    context.moveTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+  };
+
+  const draw = (e) => {
+    if (!ctx) return;
+    ctx.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+    ctx.stroke();
+    sendDraw({
+      x: e.nativeEvent.offsetX,
+      y: e.nativeEvent.offsetY,
+      prevX: e.nativeEvent.offsetX - 1,
+      prevY: e.nativeEvent.offsetY - 1,
+    });
+  };
+
+  const stopDrawing = () => {
+    setCtx(null);
   };
 
   return (
-    <Stage width={800} height={600}
-      onMouseDown={handleMouseDown}
-      onMouseup={handleMouseUp}
-      onMousemove={handleMouseMove}
-    >
-      <Layer>
-        {lines.map((line, i) => (
-          <Line key={i} points={line} stroke="black" strokeWidth={2} />
-        ))}
-      </Layer>
-    </Stage>
+    <canvas
+      ref={canvasRef}
+      width={600}
+      height={400}
+      style={{ border: "1px solid black" }}
+      onMouseDown={startDrawing}
+      onMouseMove={draw}
+      onMouseUp={stopDrawing}
+      onMouseLeave={stopDrawing}
+    />
   );
 }

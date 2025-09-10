@@ -1,27 +1,49 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { useSocket } from "../hooks/useSocket";
 
-export default function ChatBox({ socket }) {
-  const [msg, setMsg] = useState("");
+export default function ChatBox({ sessionId }) {
   const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
 
-  useEffect(() => {
-    socket.current.on("chat:remote", (data) => setMessages((m) => [...m, data]));
-  }, [socket]);
+  const { sendChat } = useSocket(
+    sessionId,
+    null,
+    (msg) => {
+      setMessages((prev) => [...prev, msg]);
+    }
+  );
 
-  const sendMessage = () => {
-    const message = { sessionId: "demo", text: msg, user: "student1" };
-    socket.current.emit("chat:message", message);
-    setMessages([...messages, message]);
-    setMsg("");
+  const handleSend = () => {
+    if (input.trim() === "") return;
+    const newMsg = { message: input, self: true };
+    setMessages((prev) => [...prev, newMsg]);
+    sendChat(input);
+    setInput("");
   };
 
   return (
-    <div>
-      <div style={{ height: "200px", overflowY: "scroll" }}>
-        {messages.map((m, i) => <p key={i}><b>{m.user}:</b> {m.text}</p>)}
+    <div style={{ border: "1px solid gray", padding: "10px", width: "300px" }}>
+      <div
+        style={{
+          height: "200px",
+          overflowY: "auto",
+          border: "1px solid lightgray",
+          marginBottom: "8px",
+        }}
+      >
+        {messages.map((m, i) => (
+          <div key={i} style={{ textAlign: m.self ? "right" : "left" }}>
+            <span>{m.message}</span>
+          </div>
+        ))}
       </div>
-      <input value={msg} onChange={(e) => setMsg(e.target.value)} />
-      <button onClick={sendMessage}>Send</button>
+      <input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && handleSend()}
+        style={{ width: "80%" }}
+      />
+      <button onClick={handleSend}>Send</button>
     </div>
   );
 }

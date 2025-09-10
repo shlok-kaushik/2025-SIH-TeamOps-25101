@@ -7,10 +7,20 @@ import Dashboard from "./pages/Dashboard";
 import Classroom from "./pages/Classroom";
 import Replay from "./pages/Replay";
 
-// Wrapper for protected routes
+// Protected route wrapper
 function PrivateRoute({ children }) {
-  const { user } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
+
+  if (loading) return <div>Loading...</div>; // or a spinner
   if (!user) return <Navigate to="/login" replace />;
+
+  return children;
+}
+
+// Public route wrapper (redirect if logged in)
+function PublicRoute({ children }) {
+  const { user } = useContext(AuthContext);
+  if (user) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -20,7 +30,14 @@ export default function App() {
       <Router>
         <Routes>
           {/* Public */}
-          <Route path="/login" element={<Login />} />
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            }
+          />
 
           {/* Protected */}
           <Route
@@ -48,8 +65,8 @@ export default function App() {
             }
           />
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" />} />
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </AuthProvider>
