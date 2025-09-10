@@ -1,49 +1,91 @@
-import React, { useState, useEffect } from "react";
-import { useSocket } from "../hooks/useSocket";
+import React, { useEffect, useState, useRef } from "react";
 
-export default function ChatBox({ sessionId }) {
+export default function ChatBox({ sessionId, socket, user }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const messagesEndRef = useRef(null);
 
-  const { sendChat } = useSocket(
-    sessionId,
-    null,
-    (msg) => {
+  // Scroll to bottom when new message arrives
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(scrollToBottom, [messages]);
+
+  useEffect(() => {
+    // Listen for chat messages from server
+    socket.on("chat", (msg) => {
       setMessages((prev) => [...prev, msg]);
-    }
-  );
+    });
 
-  const handleSend = () => {
-    if (input.trim() === "") return;
-    const newMsg = { message: input, self: true };
-    setMessages((prev) => [...prev, newMsg]);
-    sendChat(input);
+    return () => {
+      socket.off("chat");
+    };
+  }, [socket]);
+
+  const sendMessage = () => {
+    if (!input.trim()) return;
+
+    const msg = {
+      sessionId,
+      user: { email: user.email, role: user.role },
+      text: input,
+      timestamp: new Date().toISOString(),
+    };
+
+    socket.emit("chat", msg);
+    setMessages((prev) => [...prev, msg]);
     setInput("");
   };
 
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") sendMessage();
+  };
+
   return (
-    <div style={{ border: "1px solid gray", padding: "10px", width: "300px" }}>
+    <div
+      style={{
+        width: "300px",
+        border: "1px solid #ccc",
+        borderRadius: "5px",
+        padding: "10px",
+        display: "flex",
+        flexDirection: "column",
+        height: "600px",
+      }}
+    >
       <div
         style={{
-          height: "200px",
+          flex: 1,
           overflowY: "auto",
-          border: "1px solid lightgray",
-          marginBottom: "8px",
+          marginBottom: "10px",
         }}
       >
-        {messages.map((m, i) => (
-          <div key={i} style={{ textAlign: m.self ? "right" : "left" }}>
-            <span>{m.message}</span>
+        {messages.map((m, idx) => (
+          <div key={idx} style={{ marginBottom: "5px" }}>
+            <strong>{m.user.email}</strong>{" "}
+            <span style={{ fontSize: "0.8em", color: "#555" }}>
+              [{new Date(m.timestamp).toLocaleTimeString()}]
+            </span>
+            <div>{m.text}</div>
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
-      <input
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && handleSend()}
-        style={{ width: "80%" }}
-      />
-      <button onClick={handleSend}>Send</button>
+
+      <div style={{ display: "flex" }}>
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder="Type a message..."
+          style={{ flex: 1, padding: "5px" }}
+        />
+        <button onClick={sendMessage} style={{ marginLeft: "5px" }}>
+          Send
+        </button>
+      </div>
     </div>
   );
 }
