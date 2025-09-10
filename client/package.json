@@ -10,9 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "express": "^5.1.0",
+    "@headlessui/react": "^2.2.7",
+    "@heroicons/react": "^2.2.0",
+    "express": "^4.21.2",
+    "konva": "^10.0.1",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "react-konva": "^19.0.10",
+    "socket.io-client": "^4.8.1",
+    "tailwindcss": "^4.1.13"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
