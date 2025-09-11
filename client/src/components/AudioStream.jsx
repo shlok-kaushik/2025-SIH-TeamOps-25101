@@ -12,10 +12,33 @@ export default function AudioStream({ socket, user, classroomId }) {
     const pc = new RTCPeerConnection();
     pcRef.current = pc;
 
+    // Debug logging
+    pc.onconnectionstatechange = () => {
+      console.log("🔌 Connection state:", pc.connectionState);
+    };
+    pc.oniceconnectionstatechange = () => {
+      console.log("❄️ ICE state:", pc.iceConnectionState);
+    };
+
+    // ✅ Handle ICE candidates
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit("ice-candidate", {
+          classroomId,
+          candidate: event.candidate,
+          role: user.role,
+        });
+      }
+    };
+
     // Student → listen mode
     if (user.role === "student") {
       pc.ontrack = (event) => {
+        console.log("🎧 Received track:", event.streams);
         audioRef.current.srcObject = event.streams[0];
+        audioRef.current
+          .play()
+          .catch((err) => console.warn("Autoplay blocked:", err));
       };
 
       socket.on("teacher-offer", async (offer) => {
@@ -23,6 +46,12 @@ export default function AudioStream({ socket, user, classroomId }) {
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         socket.emit("student-answer", { classroomId, answer });
+      });
+
+      socket.on("ice-candidate", ({ candidate, role }) => {
+        if (role === "teacher" && candidate) {
+          pc.addIceCandidate(new RTCIceCandidate(candidate));
+        }
       });
 
       socket.on("mute-status", (muted) => {
@@ -46,12 +75,19 @@ export default function AudioStream({ socket, user, classroomId }) {
       socket.on("student-answer", async (answer) => {
         await pc.setRemoteDescription(new RTCSessionDescription(answer));
       });
+
+      socket.on("ice-candidate", ({ candidate, role }) => {
+        if (role === "student" && candidate) {
+          pc.addIceCandidate(new RTCIceCandidate(candidate));
+        }
+      });
     }
 
     return () => {
       pc.close();
       socket.off("teacher-offer");
       socket.off("student-answer");
+      socket.off("ice-candidate");
       socket.off("mute-status");
     };
   }, [socket, user, classroomId]);
@@ -85,7 +121,9 @@ export default function AudioStream({ socket, user, classroomId }) {
       )}
 
       {/* Hidden audio element for students */}
-      {user.role === "student" && <audio ref={audioRef} autoPlay className="hidden" />}
+      {user.role === "student" && (
+        <audio ref={audioRef} autoPlay playsInline controls={false} />
+      )}
     </div>
   );
 }

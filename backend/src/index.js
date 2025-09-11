@@ -3,6 +3,12 @@ import express from "express";
 import { Server } from "socket.io";
 import app from "./app.js";
 import classroomSocket from "./sockets/classroom.js";
+import cors from "cors";
+
+app.use(cors({
+  origin: ["http://localhost:5173", "https://your-frontend.onrender.com", "https://your-frontend.vercel.app"],
+  credentials: true,
+}));
 
 const PORT = process.env.PORT || 4000;
 

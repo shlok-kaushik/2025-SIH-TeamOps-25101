@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 
@@ -7,44 +7,54 @@ import Whiteboard from "../components/Whiteboard";
 import ChatBox from "../components/ChatBox";
 import AudioStream from "../components/AudioStream";
 
-
 const SOCKET_URL = "http://localhost:4000"; // backend url
 
 export default function Classroom() {
   const { user } = useContext(AuthContext);
   const { id: classroomId } = useParams();
-  const [socket, setSocket] = useState(null);
   const navigate = useNavigate();
 
+  const [connected, setConnected] = useState(false);
+
+  // ✅ Create socket once (per classroom+user)
+  const socket = useMemo(() => {
+    if (!user) return null;
+    return io(SOCKET_URL, { autoConnect: false });
+  }, [user, classroomId]);
+
   useEffect(() => {
-    if (!user) return;
+    if (!socket || !user) return;
 
-    const s = io(SOCKET_URL, { autoConnect: true });
+    socket.connect();
 
-    s.on("connect", () => {
+    socket.on("connect", () => {
       console.log("✅ Connected as", user.email, "role:", user.role);
-      s.emit("join-classroom", { classroomId, user });
+      socket.emit("join-classroom", { classroomId, user });
+      setConnected(true);
     });
 
-    s.on("classroom-ended", () => {
+    socket.on("classroom-ended", () => {
       alert("Classroom has ended. Returning to dashboard.");
       navigate("/");
     });
 
-    s.on("user-joined", (u) => console.log("👋", u.email, "joined"));
-    s.on("user-left", (u) => console.log("❌", u.email, "left"));
-
-    setSocket(s);
+    socket.on("user-joined", (u) =>
+      console.log("👋", u?.email, "joined", classroomId)
+    );
+    socket.on("user-left", (u) =>
+      console.log("❌", u?.email, "left", classroomId)
+    );
 
     return () => {
-      if (s.connected) {
-        s.emit("leave-classroom", { classroomId, user });
-        s.disconnect();
+      if (socket.connected) {
+        socket.emit("leave-classroom", { classroomId, user });
+        socket.disconnect();
       }
+      setConnected(false);
     };
-  }, [classroomId, user, navigate]);
+  }, [socket, classroomId, user, navigate]);
 
-  if (!socket) {
+  if (!connected || !socket) {
     return (
       <div className="flex items-center justify-center h-screen">
         <p className="text-lg text-gray-400">Connecting to classroom...</p>
@@ -55,24 +65,17 @@ export default function Classroom() {
   return (
     <div className="flex flex-col md:flex-row h-screen bg-gray-900 gap-4 p-4">
       {/* Left: Whiteboard */}
-      <div className="flex-grow md:flex-3">
-        <Whiteboard
-          classroomId={classroomId}
-          socket={socket}
-          user={user}
-        />
+      <div className="flex-grow md:flex-3 overflow-hidden">
+        <Whiteboard classroomId={classroomId} socket={socket} user={user} />
       </div>
-      <AudioStream socket={socket} user={user} classroomId={classroomId} />
-
 
       {/* Right: Chat */}
-      <div className="w-full md:w-96 md:flex-1 h-full md:max-h-[calc(100vh-2rem)]">
-        <ChatBox
-          classroomId={classroomId}
-          socket={socket}
-          user={user}
-        />
+      <div className="w-full md:w-96 md:flex-1 h-full md:max-h-[calc(100vh-2rem)] overflow-hidden">
+        <ChatBox classroomId={classroomId} socket={socket} user={user} />
       </div>
+
+      {/* Floating Audio */}
+      <AudioStream socket={socket} user={user} classroomId={classroomId} />
     </div>
   );
 }

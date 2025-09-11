@@ -23,17 +23,27 @@ export default function classroomSocket(io, socket) {
   });
 
   // Chat messages (everyone can chat)
-  socket.on("chat", (msg) => {
-    const classroomId = socket.data.classroomId;
-    if (!classroomId) return;
+  // Chat messages (everyone can chat)
+socket.on("chat", (msg) => {
+  const classroomId = socket.data.classroomId;
+  if (!classroomId) return;
 
-    const message = {
-      user: socket.data.user,
-      text: msg.text,            // ✅ extract text properly
-      timestamp: msg.timestamp,  // ✅ forward timestamp
-    };
+  const message = {
+    user: socket.data.user,
+    text: msg.text,
+    timestamp: msg.timestamp,
+  };
 
-    io.to(`classroom-${classroomId}`).emit("chat", message);
+  // ✅ broadcast only to others
+  socket.to(`classroom-${classroomId}`).emit("chat", message);
+});
+
+
+  // WebRTC ICE candidate exchange (relay)
+  socket.on("ice-candidate", ({ classroomId, candidate, role }) => {
+    if (!classroomId || !candidate) return;
+    // forward candidate to other peers in same classroom
+    socket.to(`classroom-${classroomId}`).emit("ice-candidate", { candidate, role });
   });
 
   // Clear canvas (teacher only)
@@ -43,6 +53,34 @@ export default function classroomSocket(io, socket) {
     if (!user || user.role.toLowerCase() !== "teacher") return;
 
     io.to(`classroom-${classroomId}`).emit("clear");
+  });
+
+  // WebRTC: Teacher sends offer
+  socket.on("teacher-offer", ({ classroomId, offer }) => {
+    const user = socket.data.user;
+    if (!user || user.role.toLowerCase() !== "teacher") return;
+    if (!classroomId || !offer) return;
+
+    // send to everyone else in the classroom (students)
+    socket.to(`classroom-${classroomId}`).emit("teacher-offer", offer);
+  });
+
+  // WebRTC: Student sends answer
+  socket.on("student-answer", ({ classroomId, answer }) => {
+    const user = socket.data.user;
+    if (!user || user.role.toLowerCase() !== "student") return;
+    if (!classroomId || !answer) return;
+
+    socket.to(`classroom-${classroomId}`).emit("student-answer", answer);
+  });
+
+  // WebRTC: Teacher mute/unmute
+  socket.on("mute-status", ({ classroomId, muted }) => {
+    const user = socket.data.user;
+    if (!user || user.role.toLowerCase() !== "teacher") return;
+    if (!classroomId) return;
+
+    socket.to(`classroom-${classroomId}`).emit("mute-status", muted);
   });
 
   // Leave classroom
@@ -61,20 +99,5 @@ export default function classroomSocket(io, socket) {
       io.to(`classroom-${classroomId}`).emit("user-left", socket.data.user);
     }
     console.log("Client disconnected:", socket.id);
-  });
-
-  // ✅ Teacher sends WebRTC offer
-  socket.on("teacher-offer", ({ classroomId, offer }) => {
-    socket.to(`classroom-${classroomId}`).emit("teacher-offer", offer);
-  });
-
-  // ✅ Student sends WebRTC answer
-  socket.on("student-answer", ({ classroomId, answer }) => {
-    socket.to(`classroom-${classroomId}`).emit("student-answer", answer);
-  });
-
-  // ✅ Teacher mute/unmute
-  socket.on("mute-status", ({ classroomId, muted }) => {
-    socket.to(`classroom-${classroomId}`).emit("mute-status", muted);
   });
 }
