@@ -10,7 +10,7 @@ const SOCKET_URL = "http://localhost:4000"; // backend url
 
 export default function Classroom() {
   const { user } = useContext(AuthContext);
-  const { id: classroomId } = useParams(); // classroom id from URL
+  const { id: classroomId } = useParams();
   const [socket, setSocket] = useState(null);
   const navigate = useNavigate();
 
@@ -21,17 +21,14 @@ export default function Classroom() {
 
     s.on("connect", () => {
       console.log("✅ Connected as", user.email, "role:", user.role);
-      // Join the classroom room
       s.emit("join-classroom", { classroomId, user });
     });
 
-    // Lifecycle events
     s.on("classroom-ended", () => {
       alert("Classroom has ended. Returning to dashboard.");
-      navigate("/"); // redirect to dashboard
+      navigate("/");
     });
 
-    // Optional: join/leave logs
     s.on("user-joined", (u) => console.log("👋", u.email, "joined"));
     s.on("user-left", (u) => console.log("❌", u.email, "left"));
 
@@ -48,19 +45,15 @@ export default function Classroom() {
   if (!socket) return <div>Connecting to classroom...</div>;
 
   return (
-    <div style={{ display: "flex", gap: "20px", height: "100vh" }}>
-      {/* Left: Whiteboard */}
-      <div style={{ flex: 3, borderRight: "1px solid #ddd" }}>
+    <div className="flex flex-col md:flex-row h-screen bg-gray-100 dark:bg-gray-900">
+      <div className="flex-grow p-4">
         <Whiteboard
           classroomId={classroomId}
           socket={socket}
           user={user}
-          canDraw={user.role === "teacher"} // ✅ only teacher can draw
         />
       </div>
-
-      {/* Right: Chat */}
-      <div style={{ flex: 1 }}>
+      <div className="w-full md:w-80 p-4">
         <ChatBox
           classroomId={classroomId}
           socket={socket}

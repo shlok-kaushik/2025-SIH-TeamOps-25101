@@ -1,104 +1,85 @@
 import React, { useEffect, useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ChatBox({ classroomId, socket, user }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const messagesEndRef = useRef(null);
+  const scrollAreaRef = useRef(null);
 
-  // Scroll to bottom when new message arrives
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  // Listen for incoming messages
-  useEffect(() => {
-    if (!socket) return;
-
-    socket.on("chat", (msg) => {
-      setMessages((prev) => [...prev, msg]);
-    });
-
+    if (socket) {
+      socket.on("chat", (msg) => {
+        setMessages((prev) => [...prev, msg]);
+      });
+    }
     return () => {
-      socket.off("chat");
+      if (socket) {
+        socket.off("chat");
+      }
     };
   }, [socket]);
+
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const sendMessage = () => {
     if (!input.trim() || !user) return;
 
     const msg = {
-      classroomId, // ✅ fixed: matches Classroom.jsx
+      classroomId,
       user: { email: user.email || "anonymous", role: user.role || "student" },
       text: input,
       timestamp: new Date().toISOString(),
     };
 
-    try {
-      socket.emit("chat", msg);
-      setMessages((prev) => [...prev, msg]); // optimistic render
-      setInput("");
-    } catch (err) {
-      console.error("Chat send error:", err);
-    }
+    socket.emit("chat", msg);
+    setMessages((prev) => [...prev, msg]);
+    setInput("");
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault(); // stop accidental reload
+    if (e.key === "Enter") {
       sendMessage();
     }
   };
 
   return (
-    <div
-      style={{
-        width: "100%",
-        border: "1px solid #ccc",
-        borderRadius: "5px",
-        padding: "10px",
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-      }}
-    >
-      {/* Messages */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          marginBottom: "10px",
-        }}
-      >
-        {messages.map((m, idx) => (
-          <div key={idx} style={{ marginBottom: "5px" }}>
-            <strong>{m.user?.email ?? "unknown"}</strong>{" "}
-            <span style={{ fontSize: "0.8em", color: "#555" }}>
-              [{new Date(m.timestamp).toLocaleTimeString()}]
-            </span>
-            <div>{m.text}</div>
+    <Card className="h-full flex flex-col">
+      <CardHeader>
+        <CardTitle>Chat</CardTitle>
+      </CardHeader>
+      <CardContent className="flex-grow flex flex-col">
+        <ScrollArea className="flex-grow mb-4" ref={scrollAreaRef}>
+          <div className="space-y-4">
+            {messages.map((m, idx) => (
+              <div key={idx} className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">{m.user?.email}</span>
+                  <span className="text-xs text-gray-500">
+                    {new Date(m.timestamp).toLocaleTimeString()}
+                  </span>
+                </div>
+                <p>{m.text}</p>
+              </div>
+            ))}
           </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input */}
-      <div style={{ display: "flex", alignItems: "center" }}>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
-          style={{ flex: 1, padding: "5px" }}
-        />
-        <button
-          type="button"
-          onClick={sendMessage}
-          style={{ marginLeft: "5px" }}
-        >
-          Send
-        </button>
-      </div>
-    </div>
+        </ScrollArea>
+        <div className="flex gap-2">
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message..."
+          />
+          <Button onClick={sendMessage}>Send</Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
