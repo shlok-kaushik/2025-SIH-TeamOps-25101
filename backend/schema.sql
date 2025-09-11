@@ -32,3 +32,12 @@ CREATE TABLE files (
   uploader_id INT REFERENCES users(id),
   uploaded_at TIMESTAMP DEFAULT now()
 );
+
+CREATE TABLE notes (
+  id SERIAL PRIMARY KEY,
+  classroom_id INT, -- optional if you want per-classroom notes
+  teacher_id INT REFERENCES users(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  filepath TEXT NOT NULL,
+  uploaded_at TIMESTAMP DEFAULT NOW()
+);

@@ -6,7 +6,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Classroom from "./pages/Classroom";
 import Replay from "./pages/Replay";
-
+import Notes from "./pages/Notes";
 // Protected route wrapper
 function PrivateRoute({ children }) {
   const { user } = useContext(AuthContext);
@@ -57,6 +57,12 @@ export default function App() {
                   <Classroom />
                 </PrivateRoute>
               }
+            />
+            <Route 
+              path="/notes" 
+              element={
+              <Notes />
+              } 
             />
             <Route
               path="/replay/:id"
