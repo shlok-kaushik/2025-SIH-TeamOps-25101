@@ -14,53 +14,92 @@ export default function Dashboard() {
   const { user, logout } = useContext(AuthContext);
 
   return (
-    <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 p-4 sm:p-6 md:p-8">
-      <header className="max-w-5xl mx-auto flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <Button onClick={logout} variant="destructive">
-          Logout
-        </Button>
-      </header>
+    <div className="flex items-center justify-center min-h-screen w-full bg-gradient-to-br from-gray-900 via-purple-900 to-gray-800">
+      <Card className="w-full max-w-4xl bg-black/30 backdrop-blur-lg border border-white/20 text-white shadow-lg">
+        <CardHeader className="flex justify-between items-center">
+          <div>
+            <CardTitle className="text-2xl font-bold">Dashboard</CardTitle>
+            <CardDescription className="text-gray-300">
+              Welcome back, {user?.email || "User"} 👋
+            </CardDescription>
+          </div>
 
-      <main className="max-w-5xl mx-auto">
-        <Card className="w-full shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-2xl">Welcome, {user?.email}</CardTitle>
-            <CardDescription className="capitalize">Your role is: {user?.role}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {user?.role === "student" && (
-              <div className="space-y-4">
-                <h3 className="font-bold text-lg">Student Panel</h3>
-                <div className="flex flex-wrap gap-4">
-                  <Link to="/classroom/1">
-                    <Button>Join Classroom</Button>
+          <Button
+            onClick={logout}
+            variant="destructive"
+            type="button"
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold"
+          >
+            Logout
+          </Button>
+        </CardHeader>
+
+        <CardContent className="space-y-8">
+          {user?.role === "student" && (
+            <div className="space-y-4">
+              <h3 className="font-bold text-lg">Student Panel</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Button
+                  asChild
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg"
+                >
+                  <Link to="/classroom/1" className="block text-center py-2">
+                    Join Classroom
                   </Link>
-                  <Link to="/replay/1">
-                    <Button variant="outline">Replay Session</Button>
+                </Button>
+
+                <Button
+                  asChild
+                  className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-lg"
+                >
+                  <Link to="/replay/1" className="block text-center py-2">
+                    Replay Session
                   </Link>
-                </div>
+                </Button>
               </div>
-            )}
+            </div>
+          )}
 
-            {user?.role === "teacher" && (
-              <div className="space-y-4">
-                <h3 className="font-bold text-lg">Teacher Panel</h3>
-                 <Link to="/classroom/1">
-                  <Button>Start Teaching Session</Button>
+          {user?.role === "teacher" && (
+            <div className="space-y-4">
+              <h3 className="font-bold text-lg">Teacher Panel</h3>
+              <Button
+                asChild
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg"
+              >
+                <Link to="/classroom/1" className="block text-center py-2">
+                  Start Teaching Session
                 </Link>
-              </div>
-            )}
+              </Button>
+            </div>
+          )}
 
-            {user?.role === "admin" && (
-              <div className="space-y-4">
-                <h3 className="font-bold text-lg">Admin Panel</h3>
-                <p>Manage users, sessions, and reports.</p>
+          {user?.role === "admin" && (
+            <div className="space-y-4">
+              <h3 className="font-bold text-lg">Admin Panel</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Button
+                  asChild
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg"
+                >
+                  <Link to="/classroom/1" className="block text-center py-2">
+                    Manage Classrooms
+                  </Link>
+                </Button>
+
+                <Button
+                  asChild
+                  className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-lg"
+                >
+                  <Link to="/admin/users" className="block text-center py-2">
+                    Manage Users
+                  </Link>
+                </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </main>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
