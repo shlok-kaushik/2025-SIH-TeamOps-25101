@@ -1,34 +1,30 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ChatBox({ classroomId, socket, user }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const scrollAreaRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
+  // Scroll to bottom when new message arrives
   useEffect(() => {
-    if (socket) {
-      socket.on("chat", (msg) => {
-        setMessages((prev) => [...prev, msg]);
-      });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Listen for incoming messages
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("chat", (msg) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+
     return () => {
-      if (socket) {
-        socket.off("chat");
-      }
+      socket.off("chat");
     };
   }, [socket]);
 
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  const sendMessage = () => {
+  const sendMessage = (e) => {
+    e.preventDefault();
     if (!input.trim() || !user) return;
 
     const msg = {
@@ -38,48 +34,57 @@ export default function ChatBox({ classroomId, socket, user }) {
       timestamp: new Date().toISOString(),
     };
 
-    socket.emit("chat", msg);
-    setMessages((prev) => [...prev, msg]);
-    setInput("");
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      sendMessage();
+    try {
+      socket.emit("chat", msg);
+      // Optimistic update for sender
+      setMessages((prev) => [...prev, msg]); 
+      setInput("");
+    } catch (err)
+ {
+      console.error("Chat send error:", err);
     }
   };
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader>
-        <CardTitle>Chat</CardTitle>
-      </CardHeader>
-      <CardContent className="flex-grow flex flex-col">
-        <ScrollArea className="flex-grow mb-4" ref={scrollAreaRef}>
-          <div className="space-y-4">
-            {messages.map((m, idx) => (
-              <div key={idx} className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold">{m.user?.email}</span>
-                  <span className="text-xs text-gray-500">
-                    {new Date(m.timestamp).toLocaleTimeString()}
-                  </span>
-                </div>
-                <p>{m.text}</p>
-              </div>
-            ))}
+    <div
+      className="bg-gray-800 rounded-xl shadow-lg p-4 flex flex-col h-full"
+    >
+      <h3 className="text-xl font-bold mb-4 text-white border-b border-gray-700 pb-2">Live Chat</h3>
+      {/* Messages */}
+      <div
+        className="flex-grow overflow-y-auto mb-4 pr-2"
+      >
+        {messages.map((m, idx) => (
+          <div key={idx} className="mb-4">
+            <div className="flex items-baseline gap-2">
+                <strong className="text-blue-400 text-sm">{m.user?.email ?? "unknown"}</strong>
+                <span className="text-xs text-gray-500">
+                {new Date(m.timestamp).toLocaleTimeString()}
+                </span>
+            </div>
+            <p className="text-gray-300">{m.text}</p>
           </div>
-        </ScrollArea>
-        <div className="flex gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
-          />
-          <Button onClick={sendMessage}>Send</Button>
-        </div>
-      </CardContent>
-    </Card>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <form onSubmit={sendMessage} className="flex items-center gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Type a message..."
+          className="w-full px-4 py-2 text-white bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          type="submit"
+          className="px-4 py-2 font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition duration-300 disabled:opacity-50"
+          disabled={!input.trim()}
+        >
+          Send
+        </button>
+      </form>
+    </div>
   );
 }

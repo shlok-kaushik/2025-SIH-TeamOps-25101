@@ -9,9 +9,10 @@ import Replay from "./pages/Replay";
 
 // Protected route wrapper
 function PrivateRoute({ children }) {
-  const { user, loading } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
 
-  if (loading) return <div>Loading...</div>; // or a spinner
+  // Note: a proper loading state would be ideal here
+  if (user === undefined) return <div>Loading...</div>; // Handle initial state
   if (!user) return <Navigate to="/login" replace />;
 
   return children;
@@ -27,48 +28,50 @@ function PublicRoute({ children }) {
 export default function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Public */}
-          <Route
-            path="/login"
-            element={
-              <PublicRoute>
-                <Login />
-              </PublicRoute>
-            }
-          />
+      <div className="min-h-screen bg-gray-900 text-white">
+        <Router>
+          <Routes>
+            {/* Public */}
+            <Route
+              path="/login"
+              element={
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
+              }
+            />
 
-          {/* Protected */}
-          <Route
-            path="/"
-            element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/classroom/:id"
-            element={
-              <PrivateRoute>
-                <Classroom />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/replay/:id"
-            element={
-              <PrivateRoute>
-                <Replay />
-              </PrivateRoute>
-            }
-          />
+            {/* Protected */}
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  <Dashboard />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/classroom/:id"
+              element={
+                <PrivateRoute>
+                  <Classroom />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/replay/:id"
+              element={
+                <PrivateRoute>
+                  <Replay />
+                </PrivateRoute>
+              }
+            />
 
-          {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
+            {/* Catch-all */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Router>
+      </div>
     </AuthProvider>
   );
 }

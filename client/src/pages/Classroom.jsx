@@ -42,18 +42,27 @@ export default function Classroom() {
     };
   }, [classroomId, user, navigate]);
 
-  if (!socket) return <div>Connecting to classroom...</div>;
+  if (!socket) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-lg text-gray-400">Connecting to classroom...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-gray-100 dark:bg-gray-900">
-      <div className="flex-grow p-4">
+    <div className="flex flex-col md:flex-row h-screen bg-gray-900 gap-4 p-4">
+      {/* Left: Whiteboard */}
+      <div className="flex-grow md:flex-3">
         <Whiteboard
           classroomId={classroomId}
           socket={socket}
           user={user}
         />
       </div>
-      <div className="w-full md:w-80 p-4">
+
+      {/* Right: Chat */}
+      <div className="w-full md:w-96 md:flex-1 h-full md:max-h-[calc(100vh-2rem)]">
         <ChatBox
           classroomId={classroomId}
           socket={socket}
