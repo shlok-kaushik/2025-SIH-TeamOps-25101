@@ -23,20 +23,18 @@ export default function classroomSocket(io, socket) {
   });
 
   // Chat messages (everyone can chat)
-  // Chat messages (everyone can chat)
-socket.on("chat", (msg) => {
-  const classroomId = socket.data.classroomId;
-  if (!classroomId) return;
+  socket.on("chat", (msg) => {
+    const classroomId = socket.data.classroomId;
+    if (!classroomId) return;
 
-  const message = {
-    user: socket.data.user,
-    text: msg.text,            // ✅ extract text properly
-    timestamp: msg.timestamp,  // ✅ forward timestamp
-  };
+    const message = {
+      user: socket.data.user,
+      text: msg.text,            // ✅ extract text properly
+      timestamp: msg.timestamp,  // ✅ forward timestamp
+    };
 
-  io.to(`classroom-${classroomId}`).emit("chat", message);
-});
-
+    io.to(`classroom-${classroomId}`).emit("chat", message);
+  });
 
   // Clear canvas (teacher only)
   socket.on("clear", () => {
@@ -63,5 +61,20 @@ socket.on("chat", (msg) => {
       io.to(`classroom-${classroomId}`).emit("user-left", socket.data.user);
     }
     console.log("Client disconnected:", socket.id);
+  });
+
+  // ✅ Teacher sends WebRTC offer
+  socket.on("teacher-offer", ({ classroomId, offer }) => {
+    socket.to(`classroom-${classroomId}`).emit("teacher-offer", offer);
+  });
+
+  // ✅ Student sends WebRTC answer
+  socket.on("student-answer", ({ classroomId, answer }) => {
+    socket.to(`classroom-${classroomId}`).emit("student-answer", answer);
+  });
+
+  // ✅ Teacher mute/unmute
+  socket.on("mute-status", ({ classroomId, muted }) => {
+    socket.to(`classroom-${classroomId}`).emit("mute-status", muted);
   });
 }

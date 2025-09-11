@@ -5,6 +5,8 @@ import io from "socket.io-client";
 import { AuthContext } from "../context/AuthContext";
 import Whiteboard from "../components/Whiteboard";
 import ChatBox from "../components/ChatBox";
+import AudioStream from "../components/AudioStream";
+
 
 const SOCKET_URL = "http://localhost:4000"; // backend url
 
@@ -60,6 +62,8 @@ export default function Classroom() {
           user={user}
         />
       </div>
+      <AudioStream socket={socket} user={user} classroomId={classroomId} />
+
 
       {/* Right: Chat */}
       <div className="w-full md:w-96 md:flex-1 h-full md:max-h-[calc(100vh-2rem)]">
